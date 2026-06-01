@@ -5,7 +5,7 @@ const prisma = new PrismaClient();
 async function main() {
   await prisma.practiceExam.deleteMany({});
   await prisma.assignment.deleteMany({});
-  await prisma.message.deleteMany({});
+  await prisma.chatMessage.deleteMany({});
   await prisma.chatSession.deleteMany({});
   await prisma.user.deleteMany({});
 

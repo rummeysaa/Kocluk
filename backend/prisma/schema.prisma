@@ -65,6 +65,7 @@ model PracticeExam {
   examName    String
   examType    ExamType
   totalNet    Float
+  weakTopicsNotes String? @db.Text
 
   // TYT Columns
   tytTurkish  Float?   @default(0)

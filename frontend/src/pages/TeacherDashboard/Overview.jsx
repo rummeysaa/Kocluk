@@ -23,6 +23,12 @@ export default function TeacherDashboardHome() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editFormData, setEditFormData] = useState({ id: null, title: '', description: '', dueDate: '' });
 
+  // Öğrenci Ekle Modal State
+  const [isAddStudentOpen, setIsAddStudentOpen] = useState(false);
+  const [addStudentForm, setAddStudentForm] = useState({ name: '', email: '', password: '', department: 'SAY' });
+  const [addStudentError, setAddStudentError] = useState('');
+  const [isAddingStudent, setIsAddingStudent] = useState(false);
+
   useEffect(() => {
     const token = localStorage.getItem("token");
     Promise.all([
@@ -176,10 +182,51 @@ export default function TeacherDashboardHome() {
     }
   };
 
+  const handleAddStudent = async (e) => {
+    e.preventDefault();
+    setAddStudentError('');
+    if (!addStudentForm.name || !addStudentForm.email || !addStudentForm.password) {
+      setAddStudentError('Ad, e-posta ve şifre zorunludur.');
+      return;
+    }
+    setIsAddingStudent(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch('http://localhost:5000/api/students', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify(addStudentForm)
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setAddStudentError(data.error || 'Öğrenci eklenemedi.');
+      } else {
+        setAllStudents(prev => [...prev, data.student]);
+        setStats(prev => ({ ...prev, activeStudents: prev.activeStudents + 1 }));
+        setIsAddStudentOpen(false);
+        setAddStudentForm({ name: '', email: '', password: '', department: 'SAY' });
+      }
+    } catch (err) {
+      setAddStudentError('Sunucu hatası oluştu.');
+    }
+    setIsAddingStudent(false);
+  };
+
   return (
     <div className="bg-white p-6 md:p-8 rounded-3xl shadow-sm border border-slate-100 min-h-[500px]">
-      <h1 className="text-2xl font-bold text-slate-800 mb-4">Öğretmen Ana Sayfası</h1>
-      <p className="text-slate-500">Öğrencilerinizin genel durumunu, yaklaşan randevularınızı ve son bildirimlerinizi buradan takip edebilirsiniz.</p>
+      <div className="flex items-center justify-between gap-4 mb-4">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-800">Öğretmen Ana Sayfası</h1>
+          <p className="text-slate-500 mt-1">Öğrencilerinizin genel durumunu, yaklaşan randevularınızı ve son bildirimlerinizi buradan takip edebilirsiniz.</p>
+        </div>
+        <button
+          onClick={() => { setAddStudentForm({ name: '', email: '', password: '', department: 'SAY' }); setAddStudentError(''); setIsAddStudentOpen(true); }}
+          className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-sm font-bold rounded-xl shadow-md shadow-blue-600/20 transition-all shrink-0"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
+          Öğrenci Ekle
+        </button>
+      </div>
       
       {loading ? (
         <div className="mt-8 text-slate-500 font-medium">İstatistikler yükleniyor...</div>
@@ -549,6 +596,125 @@ export default function TeacherDashboardHome() {
                   className="px-6 py-2.5 bg-amber-600 border border-transparent text-white text-sm font-semibold rounded-xl hover:bg-amber-700 transition-colors shadow-sm"
                 >
                   Kaydet
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Öğrenci Ekle Modalı */}
+      {isAddStudentOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+          <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden flex flex-col">
+            {/* Modal Başlık */}
+            <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-blue-600 to-indigo-600">
+              <div>
+                <h3 className="text-lg font-bold text-white">Yeni Öğrenci Ekle</h3>
+                <p className="text-blue-100 text-xs mt-0.5">Sisteme yeni bir öğrenci hesabı oluşturun</p>
+              </div>
+              <button
+                onClick={() => setIsAddStudentOpen(false)}
+                className="text-white/70 hover:text-white p-2 rounded-xl hover:bg-white/10 transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+
+            <form onSubmit={handleAddStudent} className="p-6 space-y-4">
+              {/* Ad Soyad */}
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Ad Soyad <span className="text-red-500">*</span></label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Örn: Ahmet Yılmaz"
+                  value={addStudentForm.name}
+                  onChange={(e) => setAddStudentForm({ ...addStudentForm, name: e.target.value })}
+                  className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                />
+              </div>
+
+              {/* E-posta */}
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1.5">E-posta Adresi <span className="text-red-500">*</span></label>
+                <input
+                  type="email"
+                  required
+                  placeholder="ornek@email.com"
+                  value={addStudentForm.email}
+                  onChange={(e) => setAddStudentForm({ ...addStudentForm, email: e.target.value })}
+                  className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                />
+              </div>
+
+              {/* Şifre */}
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Şifre <span className="text-red-500">*</span></label>
+                <input
+                  type="password"
+                  required
+                  placeholder="En az 6 karakter"
+                  value={addStudentForm.password}
+                  onChange={(e) => setAddStudentForm({ ...addStudentForm, password: e.target.value })}
+                  className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                />
+              </div>
+
+              {/* Alan */}
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Alan</label>
+                <div className="grid grid-cols-4 gap-2">
+                  {['SAY', 'EA', 'SÖZ', 'DİL'].map(dept => (
+                    <button
+                      key={dept}
+                      type="button"
+                      onClick={() => setAddStudentForm({ ...addStudentForm, department: dept })}
+                      className={`py-2.5 rounded-xl text-xs font-bold border-2 transition-all ${
+                        addStudentForm.department === dept
+                          ? 'border-blue-600 bg-blue-600 text-white shadow-md shadow-blue-600/20'
+                          : 'border-slate-200 bg-white text-slate-600 hover:border-blue-300'
+                      }`}
+                    >
+                      {dept}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Hata Mesajı */}
+              {addStudentError && (
+                <div className="flex items-center gap-2 bg-red-50 border border-red-100 text-red-700 px-4 py-3 rounded-xl text-sm font-medium">
+                  <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                  {addStudentError}
+                </div>
+              )}
+
+              {/* Butonlar */}
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsAddStudentOpen(false)}
+                  className="flex-1 py-2.5 bg-white border border-slate-200 text-slate-700 text-sm font-semibold rounded-xl hover:bg-slate-50 transition-colors"
+                >
+                  İptal
+                </button>
+                <button
+                  type="submit"
+                  disabled={isAddingStudent}
+                  className="flex-1 py-2.5 bg-blue-600 text-white text-sm font-bold rounded-xl hover:bg-blue-700 transition-colors shadow-md shadow-blue-600/20 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {isAddingStudent ? (
+                    <>
+                      <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+                      Ekleniyor...
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
+                      Öğrenciyi Ekle
+                    </>
+                  )}
                 </button>
               </div>
             </form>

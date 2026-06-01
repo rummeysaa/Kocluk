@@ -284,7 +284,17 @@ export default function StudentAnalyticsPage() {
                                 }`}>
                                   {exam.examType}
                                 </span>
-                                <span className="text-slate-600 font-semibold truncate max-w-[120px]" title={exam.examName}>{exam.examName}</span>
+                                <span className="text-slate-600 font-semibold truncate max-w-[120px] inline-flex items-center gap-1.5" title={exam.examName}>
+                                  {exam.examName}
+                                  {exam.weakTopicsNotes && (
+                                    <span 
+                                      className="text-amber-500 cursor-help hover:text-amber-600 shrink-0 select-none text-xs" 
+                                      title={`Zayıf Konu Notları: ${exam.weakTopicsNotes}`}
+                                    >
+                                      📝
+                                    </span>
+                                  )}
+                                </span>
                               </td>
                               
                               {/* TYT Hücreleri */}

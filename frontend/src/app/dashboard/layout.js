@@ -1,10 +1,75 @@
 "use client";
-import React from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 export default function DashboardLayout({ children }) {
   const pathname = usePathname();
+  const router = useRouter();
+  
+  const [notifications, setNotifications] = useState([]);
+  const [readIds, setReadIds] = useState([]);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+    if (!storedUser) {
+      router.push("/");
+      return;
+    }
+    const parsedUser = JSON.parse(storedUser);
+    if (parsedUser.role !== "STUDENT") {
+      router.push("/teacher-dashboard");
+      return;
+    }
+    setUser(parsedUser);
+
+      // Load read notifications
+      const storedRead = localStorage.getItem(`read_notifications_${parsedUser.id}`);
+      if (storedRead) {
+        setReadIds(JSON.parse(storedRead));
+      }
+
+      // Fetch notification items
+      const fetchNotifications = async () => {
+        try {
+          const response = await fetch(`http://localhost:5000/api/student/notifications?studentId=${parsedUser.id}`);
+          if (response.ok) {
+            const data = await response.json();
+            setNotifications(data || []);
+          }
+        } catch (err) {
+          console.error("Error fetching notifications:", err);
+        }
+      };
+
+      fetchNotifications();
+      // Poll for updates
+      const interval = setInterval(fetchNotifications, 15000);
+      return () => clearInterval(interval);
+  }, []);
+
+  const handleMarkAsRead = (id) => {
+    if (!readIds.includes(id)) {
+      const updatedRead = [...readIds, id];
+      setReadIds(updatedRead);
+      if (user) {
+        localStorage.setItem(`read_notifications_${user.id}`, JSON.stringify(updatedRead));
+      }
+    }
+  };
+
+  const handleMarkAllAsRead = () => {
+    const allIds = notifications.map(n => n.id);
+    setReadIds(allIds);
+    if (user) {
+      localStorage.setItem(`read_notifications_${user.id}`, JSON.stringify(allIds));
+    }
+  };
+
+  const unreadNotifications = notifications.filter(n => !readIds.includes(n.id));
+  const hasUnread = unreadNotifications.length > 0;
 
   const getNavClass = (path) => {
     return pathname === path
@@ -50,12 +115,73 @@ export default function DashboardLayout({ children }) {
           <button className="md:hidden p-2 text-slate-500">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16"></path></svg>
           </button>
-          <div className="flex items-center gap-4">
-            <button className="relative p-2 text-slate-400 hover:text-slate-600 transition">
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-blue-500 rounded-full border-2 border-white"></span>
-            </button>
-            <img src="https://ui-avatars.com/api/?name=Ahmet&background=2563EB&color=fff&rounded=true" alt="Profile" className="w-10 h-10 rounded-full border-2 border-slate-100" />
+          <div className="flex items-center gap-4 relative">
+            {/* Bildirim Çanı */}
+            <div className="relative">
+              <button 
+                onClick={() => setShowDropdown(!showDropdown)}
+                className="relative p-2 text-slate-400 hover:text-slate-600 transition bg-slate-50 hover:bg-slate-100 rounded-xl border border-slate-100"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
+                {hasUnread && (
+                  <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-blue-500 rounded-full border border-white animate-pulse"></span>
+                )}
+              </button>
+
+              {/* Bildirim Dropdown Listesi */}
+              {showDropdown && (
+                <div className="absolute right-0 mt-3 w-80 bg-white rounded-2xl shadow-xl border border-slate-100 py-3 z-50">
+                  <div className="flex items-center justify-between px-4 pb-2 border-b border-slate-100">
+                    <span className="font-bold text-slate-800 text-sm">Bildirimler ({unreadNotifications.length})</span>
+                    {hasUnread && (
+                      <button 
+                        onClick={handleMarkAllAsRead}
+                        className="text-[11px] font-bold text-blue-600 hover:text-blue-700 transition"
+                      >
+                        Tümünü Okundu Say
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="max-h-64 overflow-y-auto mt-2">
+                    {notifications.length === 0 ? (
+                      <div className="py-8 text-center text-slate-400 text-xs">
+                        Yeni bir bildirim bulunmuyor.
+                      </div>
+                    ) : (
+                      notifications.map((notification) => {
+                        const isRead = readIds.includes(notification.id);
+                        return (
+                          <div 
+                            key={notification.id} 
+                            onClick={() => handleMarkAsRead(notification.id)}
+                            className={`px-4 py-3 border-b border-slate-50 last:border-0 hover:bg-slate-50 cursor-pointer transition-colors ${!isRead ? 'bg-blue-50/30' : ''}`}
+                          >
+                            <div className="flex justify-between items-start gap-2">
+                              <p className={`text-xs ${!isRead ? 'font-bold text-slate-800' : 'text-slate-600'}`}>
+                                {notification.title}
+                              </p>
+                              {!isRead && (
+                                <span className="w-1.5 h-1.5 bg-blue-500 rounded-full mt-1 shrink-0 animate-ping"></span>
+                              )}
+                            </div>
+                            <p className="text-[11px] text-slate-500 mt-1 leading-normal">
+                              {notification.message}
+                            </p>
+                            <span className="text-[9px] text-slate-400 font-medium block mt-1.5">
+                              {new Date(notification.time).toLocaleString('tr-TR', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: 'short' })}
+                            </span>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Profil Resmi */}
+            <img src={`https://ui-avatars.com/api/?name=${user ? encodeURIComponent(user.name) : 'Ogrenci'}&background=2563EB&color=fff&rounded=true`} alt="Profile" className="w-10 h-10 rounded-full border-2 border-slate-100" />
           </div>
         </header>
 

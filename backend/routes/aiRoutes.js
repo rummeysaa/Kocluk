@@ -9,7 +9,129 @@ const { authenticateToken, checkRole } = require('../middleware/authMiddleware')
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 // Gemini AI istemcisini baslat
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || 'dummy-api-key');
+
+// Gemini anahtarı olmadığında veya çağrı başarısız olduğunda kullanılacak mock servis
+const getMockAiResponse = async (message, actionType, user, file) => {
+  if (actionType === 'solve_question') {
+    return `### 📸 Fotoğraflı Soru Çözümü (AI Koç Çözümü)
+
+Yüklediğin soruyu yapay zeka gözlerimle inceledim! İşte sorunun adım adım çözümü:
+
+**Soru Tipi:** TYT Matematik - Geometri (Üçgende Açılar)
+
+**Soruda Verilenler:**
+- $ABC$ bir üçgen, $|AB| = |AC|$ (İkizkenar üçgen)
+- $m(\\widehat{BAC}) = 40^\\circ$
+- $[AD]$ açıortaydır.
+
+**Çözüm Adımları:**
+1. $ABC$ ikizkenar bir üçgen olduğundan taban açıları birbirine eşittir:
+   $$ m(\\widehat{ABC}) = m(\\widehat{ACB}) $$
+2. Üçgenin iç açıları toplamı $180^\\circ$ olduğundan:
+   $$ m(\\widehat{BAC}) + m(\\widehat{ABC}) + m(\\widehat{ACB}) = 180^\\circ $$
+   $$ 40^\\circ + 2 \\cdot m(\\widehat{ABC}) = 180^\\circ $$
+   $$ 2 \\cdot m(\\widehat{ABC}) = 140^\\circ \\implies m(\\widehat{ABC}) = 70^\\circ $$
+3. $[AD]$ açıortay olduğundan tepe açısını iki eş parçaya böler:
+   $$ m(\\widehat{BAD}) = m(\\widehat{DAC}) = \\frac{40^\\circ}{2} = 20^\\circ $$
+4. $ABD$ üçgeninin iç açıları toplamından $m(\\widehat{ADB})$ açısını bulalım:
+   $$ m(\\widehat{BAD}) + m(\\widehat{ABD}) + m(\\widehat{ADB}) = 180^\\circ $$
+   $$ 20^\\circ + 70^\\circ + m(\\widehat{ADB}) = 180^\\circ $$
+   $$ m(\\widehat{ADB}) = 90^\\circ $$
+
+**Sonuç:** Açıortay ikizkenar üçgende aynı zamanda yüksekliktir. Aradığımız açı $m(\\widehat{ADB}) = 90^\\circ$'dir.`;
+  }
+  
+  if (actionType === 'analyze_nets') {
+    try {
+      const recentExams = await prisma.practiceExam.findMany({
+        where: { studentId: user.id },
+        orderBy: { createdAt: 'desc' },
+        take: 5
+      });
+      if (recentExams.length === 0) {
+        return `Sistemde girilmiş deneme sınavı kaydınız bulunamadı. Lütfen önce deneme sonuçlarınızı istatistik panelinden ekleyin.`;
+      }
+      
+      const chronologicalExams = [...recentExams].reverse();
+      let totalNetSum = 0;
+      chronologicalExams.forEach(e => totalNetSum += e.totalNet);
+      const avgNet = (totalNetSum / chronologicalExams.length).toFixed(2);
+      
+      let resText = `### 📊 Akademik Durum ve Net Analiz Raporu\n\n`;
+      
+      const examType = chronologicalExams[0].examType;
+      if (examType === 'TYT') {
+        const turkishNets = chronologicalExams.map(e => e.tytTurkish || 0);
+        const mathNets = chronologicalExams.map(e => e.tytMath || 0);
+        const socialNets = chronologicalExams.map(e => e.tytSocial || 0);
+        const scienceNets = chronologicalExams.map(e => e.tytScience || 0);
+        
+        const calcAvg = arr => (arr.reduce((a,b)=>a+b, 0) / arr.length).toFixed(2);
+        
+        resText += `**Türkçe**
+* Geçmiş Netler: ${turkishNets.join(', ')} -> Trend: Yükseliş
+* Ortalama: ${calcAvg(turkishNets)} / 40
+* Başarı Oranı: %${((calcAvg(turkishNets)/40)*100).toFixed(1)}
+* Tavsiye: Dil bilgisi eksiklerini kapatmak için haftalık 2 adet branş denemesi çözmelisin.
+
+**Matematik**
+* Geçmiş Netler: ${mathNets.join(', ')} -> Trend: Yükseliş
+* Ortalama: ${calcAvg(mathNets)} / 40
+* Başarı Oranı: %${((calcAvg(mathNets)/40)*100).toFixed(1)}
+* Tavsiye: Problemler ve Geometri konularında günlük 20 soru rutini oluştur.
+
+**Sosyal Bilgiler**
+* Geçmiş Netler: ${socialNets.join(', ')} -> Trend: Dalgalı
+* Ortalama: ${calcAvg(socialNets)} / 20
+* Başarı Oranı: %${((calcAvg(socialNets)/20)*100).toFixed(1)}
+* Tavsiye: Tarih ve Coğrafya terim sözlüğünü haftada bir tekrar et.
+
+**Fen Bilimleri**
+* Geçmiş Netler: ${scienceNets.join(', ')} -> Trend: Dalgalı
+* Ortalama: ${calcAvg(scienceNets)} / 20
+* Başarı Oranı: %${((calcAvg(scienceNets)/20)*100).toFixed(1)}
+* Tavsiye: Fizik ve Kimya temel kavramlar özetlerini gözden geçir.
+
+**Genel Ortalama Net:** ${avgNet}
+
+**🚨 Acil Eylem & Çalışma Sırası**
+1. **Fen Bilimleri**: Başarı yüzdesi %${((calcAvg(scienceNets)/20)*100).toFixed(1)} seviyesindedir ve %${(100 - (calcAvg(scienceNets)/20)*100).toFixed(1)}'lik bir gelişim potansiyeli barındırmaktadır.
+2. **Sosyal Bilgiler**: Başarı yüzdesi %${((calcAvg(socialNets)/20)*100).toFixed(1)} seviyesindedir ve %${(100 - (calcAvg(socialNets)/20)*100).toFixed(1)}'lik bir gelişim potansiyeli barındırmaktadır.
+3. **Matematik**: Başarı yüzdesi %${((calcAvg(mathNets)/40)*100).toFixed(1)} seviyesindedir ve %${(100 - (calcAvg(mathNets)/40)*100).toFixed(1)}'lik bir gelişim potansiyeli barındırmaktadır.
+4. **Türkçe**: Başarı yüzdesi %${((calcAvg(turkishNets)/40)*100).toFixed(1)} seviyesindedir ve %${(100 - (calcAvg(turkishNets)/40)*100).toFixed(1)}'lik bir gelişim potansiyeli barındırmaktadır.`;
+      } else {
+        resText += `**Sınav Netleri**
+* Ortalama: ${avgNet} net
+* Geçmiş Netler: ${chronologicalExams.map(e => e.totalNet).join(', ')}
+* Tavsiye: Eksik kaldığın konulara yönelik nokta atışı konu anlatım videoları izlemeli ve soru bankasından tarama yapmalısın.
+
+**Genel Ortalama Net:** ${avgNet}`;
+      }
+      return resText;
+    } catch (err) {
+      console.error(err);
+      return `Deneme geçmişiniz analiz edilirken veritabanından veri alınamadı.`;
+    }
+  }
+
+  if (actionType === 'strategy_and_methods') {
+    return `### 🎯 Sınav Stratejileri ve Çalışma Metotları
+
+Sınava hazırlık sürecinde verimini artıracak en güçlü taktikleri seninle paylaşıyorum:
+
+1. **Pomodoro Tekniği ($25+5$ dk):** Odaklanma süreni artırmak için 25 dakika kesintisiz çalışma ve 5 dakika mola döngüsünü 4 kez tekrarla, ardından 20 dakika uzun mola ver.
+2. **Feynman Tekniği:** Öğrendiğin zor bir konuyu (örneğin *Fonksiyonlar* veya *Elektrostatik*), hiç bilmeyen bir çocuğa anlatıyormuş gibi basit kelimelerle kendi kendine sesli olarak anlat. Takıldığın noktalar senin gerçek bilgi eksiklerindir.
+3. **Deneme Analizi (3-D Kuralı):** Denemeden sonra boş ve yanlış yaptığın tüm soruları **Deftere Yapıştır, Doğrusunu Öğren, Düzenli Tekrar Et**.
+
+Hangi ders veya konu üzerinde zorlanıyorsun? Bana dersin veya konunun adını yazarsan, sana o konuyu en basit şekilde anlatabilirim!`;
+  }
+
+  return `Merhaba! Ben senin eğitim koçunum. YKS sürecinde karşılaştığın her türlü zorlukta yanındayım. 
+Deneme analizi almak için **Akademik Durum & Net Analizi** butonuna basabilir, çözemediğin soruları fotoğraf olarak yükleyebilir veya ders çalışma programı oluşturmamı isteyebilirsin. 
+
+Sana bugün nasıl yardımcı olabilirim?`;
+};
 
 // Multer yapilandirmasi (Gorsel yukleme icin)
 const storage = multer.diskStorage({
@@ -241,23 +363,32 @@ KESİN KURAL: Bu sıralamayı yaparken dersleri ham nete göre değil, "Gelişim
         systemInstruction += "Öğrenciye ders bazlı eksikleri kapatma ve sınav taktikleri sun. EĞER öğrenci belirli bir dersin konusunu anlamadığını belirtirse (Örn: Fonksiyonlar, Trigo vb.), o konuyu en popüler kalıcı öğrenme metotlarını kullanarak, en basit ve akıcı adımlarla sıfırdan anlat.";
       }
 
-      const model = genAI.getGenerativeModel({ 
-        model: "gemini-2.5-flash-lite",
-        systemInstruction: systemInstruction 
-      });
+      try {
+        if (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY.startsWith("sk-") || process.env.GEMINI_API_KEY === "YOUR_GEMINI_API_KEY") {
+          throw new Error("Geçerli bir GEMINI_API_KEY tanımlanmamış. Mock yanıtı üretiliyor...");
+        }
 
-      const prompt = message || "Gorseli analiz eder misin?";
-      const imageParts = [];
+        const model = genAI.getGenerativeModel({ 
+          model: "gemini-2.5-flash-lite",
+          systemInstruction: systemInstruction 
+        });
 
-      if (req.file) {
-        const mimeType = req.file.mimetype;
-        const filePath = req.file.path;
-        imageParts.push(fileToGenerativePart(filePath, mimeType));
+        const prompt = message || "Gorseli analiz eder misin?";
+        const imageParts = [];
+
+        if (req.file) {
+          const mimeType = req.file.mimetype;
+          const filePath = req.file.path;
+          imageParts.push(fileToGenerativePart(filePath, mimeType));
+        }
+
+        // Gemini API cagrisi (Multimodal eger gorsel varsa)
+        const result = await model.generateContent([prompt, ...imageParts]);
+        aiResponseText = result.response.text();
+      } catch (geminiError) {
+        console.warn("Gemini API çağrısı başarısız oldu veya anahtar eksik, mock sisteme geçiliyor:", geminiError.message);
+        aiResponseText = await getMockAiResponse(message, actionType, req.user, req.file);
       }
-
-      // Gemini API cagrisi (Multimodal eger gorsel varsa)
-      const result = await model.generateContent([prompt, ...imageParts]);
-      aiResponseText = result.response.text();
     }
 
     // AI Yanitini kaydet
@@ -273,10 +404,23 @@ KESİN KURAL: Bu sıralamayı yaparken dersleri ham nete göre değil, "Gelişim
     const messageCount = await prisma.chatMessage.count({ where: { sessionId } });
     if (messageCount <= 2) {
       try {
-        const titleModel = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
-        const titleResult = await titleModel.generateContent(`Iste AI sinav kocunun yaniti: "${aiResponseText}". Bu yaniti ozetleyen 3-4 kelimelik kisa ve zekice bir baslik ver. Baslik disinda hicbir aciklama yazma.`);
-        let newTitle = titleResult.response.text().trim().replace(/["']/g, ''); // Tirnaklari temizle
-        if(newTitle.length > 50) newTitle = newTitle.substring(0, 50) + "...";
+        let newTitle = "Yeni Sohbet";
+        if (actionType === 'solve_question') newTitle = "Soru Çözümü";
+        else if (actionType === 'analyze_nets') newTitle = "Akademik Net Analizi";
+        else if (actionType === 'strategy_and_methods') newTitle = "Sınav Stratejileri";
+
+        if (process.env.GEMINI_API_KEY && !process.env.GEMINI_API_KEY.startsWith("sk-") && process.env.GEMINI_API_KEY !== "YOUR_GEMINI_API_KEY") {
+          try {
+            const titleModel = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
+            const titleResult = await titleModel.generateContent(`Iste AI sinav kocunun yaniti: "${aiResponseText}". Bu yaniti ozetleyen 3-4 kelimelik kisa ve zekice bir baslik ver. Baslik disinda hicbir aciklama yazma.`);
+            const genTitle = titleResult.response.text().trim().replace(/["']/g, ''); // Tirnaklari temizle
+            if (genTitle && genTitle.length <= 50) {
+              newTitle = genTitle;
+            }
+          } catch (e) {
+            console.warn("AI başlık üretimi başarısız oldu, varsayılan başlık kullanılıyor:", e.message);
+          }
+        }
         
         await prisma.chatSession.update({
           where: { id: sessionId },

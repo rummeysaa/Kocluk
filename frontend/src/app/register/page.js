@@ -3,54 +3,53 @@ import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
-export default function LoginPage() {
+export default function RegisterPage() {
   const [role, setRole] = useState("student"); // 'student' or 'teacher'
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  const handleLogin = async (e) => {
+  const handleRegister = async (e) => {
     e.preventDefault();
     setError("");
+    setSuccess("");
     setLoading(true);
 
     try {
-      const response = await fetch("http://localhost:5000/api/auth/login", {
+      const response = await fetch("http://localhost:5000/api/auth/register", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
+          name,
           email,
           password,
+          role,
         }),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || "Giriş başarısız oldu.");
+        throw new Error(data.error || "Kayıt işlemi başarısız oldu.");
       }
 
-      // Check role matches selected role (case insensitive comparison)
-      const userRole = data.user.role.toLowerCase();
-      if (userRole !== role) {
-        let roleName = "Öğrenci";
-        if (role === "teacher") roleName = "Öğretmen";
-        throw new Error(`Seçtiğiniz rol (${roleName}) bu kullanıcının sistemdeki gerçek rolüyle eşleşmiyor.`);
-      }
+      setSuccess("Kayıt işlemi başarıyla tamamlandı! Giriş sayfasına yönlendiriliyorsunuz...");
+      
+      // Clear inputs
+      setName("");
+      setEmail("");
+      setPassword("");
 
-      // Save user details to localStorage
-      localStorage.setItem("user", JSON.stringify(data.user));
-
-      // Redirect based on role
-      if (userRole === "teacher") {
-        router.push("/teacher-dashboard");
-      } else {
-        router.push("/dashboard");
-      }
+      // Redirect to login page after 2 seconds
+      setTimeout(() => {
+        router.push("/");
+      }, 2000);
 
     } catch (err) {
       setError(err.message);
@@ -63,23 +62,25 @@ export default function LoginPage() {
     <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center p-6">
       <div className="max-w-6xl w-full grid grid-cols-1 md:grid-cols-2 gap-12 lg:gap-24 items-center">
         
-        {/* Sol Taraf - Yazı */}
+        {/* Sol Taraf - Bilgilendirme Yazısı */}
         <div className="flex flex-col justify-center space-y-6">
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-[#111827] leading-tight">
-            Eğitimde Yapay Zeka <br />
-            <span className="text-[#2563EB]">Güçlü Gelecek</span>
+            Yolculuğa <br />
+            <span className="text-[#2563EB]">Bugün Başla</span>
           </h1>
           <p className="text-lg text-slate-600 max-w-md leading-relaxed">
-            Öğrencilerin başarısını takip edin, yapay zeka destekli analizlerle gelişimi hızlandırın.
+            Hesabınızı oluşturarak hedeflerinize giden yolda yapay zeka destekli eğitim koçunuzdan faydalanmaya başlayın.
           </p>
         </div>
 
-        {/* Sağ Taraf - Form Kartı */}
+        {/* Sağ Taraf - Kayıt Formu Kartı */}
         <div className="w-full max-w-md mx-auto md:ml-auto">
           <div className="bg-white rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-8">
             
+            <h2 className="text-2xl font-bold text-slate-800 mb-6 text-center">Yeni Hesap Oluştur</h2>
+
             {/* Rol Seçimi (Öğrenci / Öğretmen) */}
-            <div className="flex bg-slate-100 p-1.5 rounded-xl mb-8">
+            <div className="flex bg-slate-100 p-1.5 rounded-xl mb-6">
               <button
                 type="button"
                 onClick={() => {
@@ -125,8 +126,27 @@ export default function LoginPage() {
               </div>
             )}
 
+            {/* Success Message */}
+            {success && (
+              <div className="bg-green-50 text-green-600 p-4 rounded-xl text-sm mb-6 font-medium border border-green-100">
+                {success}
+              </div>
+            )}
+
             {/* Form */}
-            <form className="space-y-5" onSubmit={handleLogin}>
+            <form className="space-y-5" onSubmit={handleRegister}>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Ad Soyad</label>
+                <input
+                  type="text"
+                  required
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Ahmet Yılmaz"
+                  className="w-full border border-slate-200 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-[#2563EB] focus:border-[#2563EB] transition-colors"
+                />
+              </div>
+
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">E-posta</label>
                 <input
@@ -153,27 +173,20 @@ export default function LoginPage() {
 
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || success}
                 className="w-full bg-[#2563EB] text-white font-semibold rounded-xl py-3.5 flex items-center justify-center gap-2 hover:bg-blue-700 transition-colors mt-2 shadow-sm disabled:bg-blue-400"
               >
-                {loading ? "Giriş Yapılıyor..." : "Giriş Yap"}
+                {loading ? "Kaydediliyor..." : "Kaydol"}
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M5 12h14M12 5l7 7-7 7"/>
                 </svg>
               </button>
             </form>
 
-            <div className="mt-6 text-center space-y-3">
-              <div>
-                <Link href="/register" className="text-sm font-semibold text-[#2563EB] hover:text-blue-700 transition-colors">
-                  Hesabınız yok mu? Kaydolun
-                </Link>
-              </div>
-              <div>
-                <a href="#" className="text-xs text-slate-500 hover:text-slate-700 transition-colors">
-                  Şifremi Unuttum
-                </a>
-              </div>
+            <div className="mt-6 text-center">
+              <Link href="/" className="text-sm font-semibold text-[#2563EB] hover:text-blue-700 transition-colors">
+                Zaten hesabınız var mı? Giriş Yapın
+              </Link>
             </div>
 
           </div>

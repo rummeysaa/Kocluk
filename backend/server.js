@@ -71,6 +71,38 @@ app.get('/api/students', authenticateToken, checkRole(['TEACHER', 'ADMIN']), asy
   }
 });
 
+// 2.1 POST /api/students - Yeni öğrenci oluşturma (Öğretmen/Admin)
+app.post('/api/students', authenticateToken, checkRole(['TEACHER', 'ADMIN']), async (req, res) => {
+  try {
+    const { name, email, password, department } = req.body;
+    if (!name || !email || !password) {
+      return res.status(400).json({ error: 'Ad, e-posta ve şifre zorunludur.' });
+    }
+
+    const existingUser = await prisma.user.findUnique({ where: { email } });
+    if (existingUser) {
+      return res.status(409).json({ error: 'Bu e-posta adresi zaten kayıtlı.' });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const newStudent = await prisma.user.create({
+      data: {
+        name,
+        email,
+        password: hashedPassword,
+        role: 'STUDENT',
+        department: department || null
+      },
+      select: { id: true, name: true, email: true, department: true }
+    });
+
+    res.status(201).json({ message: 'Öğrenci başarıyla oluşturuldu.', student: newStudent });
+  } catch (error) {
+    console.error('Error creating student:', error);
+    res.status(500).json({ error: 'Öğrenci oluşturulurken bir hata oluştu.' });
+  }
+});
+
 // 3. GET /api/exams/student/:studentId
 app.get('/api/exams/student/:studentId', authenticateToken, async (req, res) => {
   try {
@@ -310,7 +342,7 @@ app.delete('/api/assignments/:id', authenticateToken, checkRole(['TEACHER', 'ADM
 app.post('/api/exams', authenticateToken, checkRole(['STUDENT']), async (req, res) => {
   try {
     const { 
-      examType, examName, examDate,
+      examType, examName, examDate, weakTopicsNotes,
       tytTurkishD, tytTurkishY, 
       tytMathD, tytMathY, 
       tytSocialD, tytSocialY, 
@@ -364,6 +396,7 @@ app.post('/api/exams', authenticateToken, checkRole(['STUDENT']), async (req, re
         aytEdSos1,
         aytSocial2,
         ydtLanguage,
+        weakTopicsNotes,
         studentId: req.user.id,
         ...(examDate && { createdAt: new Date(examDate) })
       }

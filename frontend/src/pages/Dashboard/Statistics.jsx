@@ -16,6 +16,7 @@ function ExamCreateModal({ isOpen, onClose, onExamCreated }) {
   const [examType, setExamType] = useState("TYT");
   const [examName, setExamName] = useState("");
   const [examDate, setExamDate] = useState("");
+  const [weakTopicsNotes, setWeakTopicsNotes] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState({});
 
@@ -88,7 +89,7 @@ function ExamCreateModal({ isOpen, onClose, onExamCreated }) {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`
         },
-        body: JSON.stringify({ examType, examName, examDate, ...formData })
+        body: JSON.stringify({ examType, examName, examDate, weakTopicsNotes, ...formData })
       });
 
       if (response.ok) {
@@ -96,6 +97,7 @@ function ExamCreateModal({ isOpen, onClose, onExamCreated }) {
         onClose();
         setExamName("");
         setExamDate("");
+        setWeakTopicsNotes("");
         setFormData({
           tytTurkishD: "", tytTurkishY: "", tytMathD: "", tytMathY: "",
           tytSocialD: "", tytSocialY: "", tytScienceD: "", tytScienceY: "",
@@ -197,6 +199,17 @@ function ExamCreateModal({ isOpen, onClose, onExamCreated }) {
                   {renderInputs("Yabancı Dil", "ydtLangD", "ydtLangY")}
                 </div>
               )}
+            </div>
+
+            <div className="mt-4 pt-4 border-t border-slate-100">
+              <label className="block text-sm font-semibold text-slate-700 mb-2">Zayıf Konu Notları (En Çok Yanlış/Boş Yapılan Konular)</label>
+              <textarea 
+                placeholder="Örn: Matematik - Permütasyon, Türkçe - Paragrafta Anlam..." 
+                value={weakTopicsNotes} 
+                onChange={(e) => setWeakTopicsNotes(e.target.value)}
+                rows={3}
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 resize-none"
+              />
             </div>
           </form>
         </div>
@@ -761,6 +774,15 @@ export default function StatisticsPage() {
                             </>
                           )}
                         </div>
+
+                        {exam.weakTopicsNotes && (
+                          <div className="mt-4 p-4 bg-amber-50/50 border border-amber-100 rounded-2xl">
+                            <h4 className="text-xs font-bold text-amber-800 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                              <span>⚠️</span> Zayıf Konu Notları
+                            </h4>
+                            <p className="text-sm text-slate-700 leading-relaxed font-medium">{exam.weakTopicsNotes}</p>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
