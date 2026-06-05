@@ -10,6 +10,7 @@ export default function DashboardLayout() {
 
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false); // Mobile Drawer State
+  const [isAiOpen, setIsAiOpen] = useState(false); // AI Panel State
 
   const handleLogout = () => {
     localStorage.clear();
@@ -156,8 +157,21 @@ export default function DashboardLayout() {
           <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"></path></svg>
         </Link>
 
+        {/* AI Koçum Sidebar Butonu */}
+        <button 
+          onClick={() => setIsAiOpen(!isAiOpen)} 
+          className={isAiOpen
+            ? "bg-indigo-600 p-3 rounded-2xl cursor-pointer text-white shadow-md shadow-indigo-500/20"
+            : "p-3 rounded-2xl cursor-pointer hover:bg-slate-800 text-slate-400 hover:text-white transition-all"} 
+          title="AI Koçum"
+        >
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+          </svg>
+        </button>
+
         <div className="mt-auto flex flex-col items-center gap-6 w-full px-4">
-          <Link to="/dashboard/settings" className={getNavClassDesktop("/dashboard/settings")} title="Ayarlar">
+          <Link to="/dashboard/settings" className={getNavClassDesktop("/dashboard/settings")} title="Hesap Bilgileri">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
           </Link>
 
@@ -202,13 +216,26 @@ export default function DashboardLayout() {
             <svg className="w-6 h-6 shrink-0" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"></path></svg>
             <span className="font-bold tracking-wide text-sm">İstatistikler</span>
           </Link>
+
+          {/* AI Koçum Mobil Buton */}
+          <button 
+            onClick={() => { setIsAiOpen(!isAiOpen); setIsMobileMenuOpen(false); }} 
+            className={isAiOpen
+              ? "flex items-center gap-4 bg-indigo-600 p-3.5 rounded-2xl cursor-pointer text-white shadow-md shadow-indigo-500/20"
+              : "flex items-center gap-4 p-3.5 rounded-2xl cursor-pointer hover:bg-slate-800 text-slate-400 hover:text-white transition-all"}
+          >
+            <svg className="w-6 h-6 shrink-0" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+            <span className="font-bold tracking-wide text-sm">AI Koçum</span>
+          </button>
         </div>
         
         <div className="mt-auto flex flex-col gap-3 px-6">
           <div className="h-px w-full bg-slate-800 mb-2"></div>
           <Link to="/dashboard/settings" onClick={() => setIsMobileMenuOpen(false)} className={getNavClassMobile("/dashboard/settings")}>
             <svg className="w-6 h-6 shrink-0" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-            <span className="font-bold tracking-wide text-sm">Ayarlar</span>
+            <span className="font-bold tracking-wide text-sm">Hesap Bilgileri</span>
           </Link>
           <button onClick={() => { setIsLogoutModalOpen(true); setIsMobileMenuOpen(false); }} className="flex items-center gap-4 p-3.5 rounded-2xl cursor-pointer hover:bg-red-500/10 text-slate-400 hover:text-red-500 transition-all">
             <svg className="w-6 h-6 shrink-0" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
@@ -349,7 +376,7 @@ export default function DashboardLayout() {
       />
       
       {/* Global Yüzen AI Asistan */}
-      {user.role === 'STUDENT' && <AiCoachWidget />}
+      {user.role === 'STUDENT' && <AiCoachWidget isOpen={isAiOpen} setIsOpen={setIsAiOpen} />}
     </div>
   );
 }

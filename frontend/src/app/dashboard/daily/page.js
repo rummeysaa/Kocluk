@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { authFetch } from "../../utils/api";
 
 export default function DailyTasksPage() {
   const [loading, setLoading] = useState(true);
@@ -19,7 +20,7 @@ export default function DailyTasksPage() {
         }
 
         const user = JSON.parse(userStr);
-        const response = await fetch(`http://localhost:5000/api/student/dashboard-data?studentId=${user.id}`);
+        const response = await authFetch(`http://localhost:5000/api/student/dashboard-data?studentId=${user.id}`);
         if (!response.ok) {
           throw new Error("Görevler yüklenirken bir sorun oluştu.");
         }
@@ -75,7 +76,7 @@ export default function DailyTasksPage() {
       }
 
       // Fetch the fresh database-backed data to align tasks
-      const res = await fetch(`http://localhost:5000/api/student/dashboard-data?studentId=${user.id}`);
+      const res = await authFetch(`http://localhost:5000/api/student/dashboard-data?studentId=${user.id}`);
       if (res.ok) {
         const data = await res.json();
         setTasks(data.tasks || []);
@@ -87,7 +88,7 @@ export default function DailyTasksPage() {
       const userStr = localStorage.getItem("user");
       if (userStr) {
         const user = JSON.parse(userStr);
-        const res = await fetch(`http://localhost:5000/api/student/dashboard-data?studentId=${user.id}`);
+        const res = await authFetch(`http://localhost:5000/api/student/dashboard-data?studentId=${user.id}`);
         const data = await res.json();
         setTasks(data.tasks || []);
       }

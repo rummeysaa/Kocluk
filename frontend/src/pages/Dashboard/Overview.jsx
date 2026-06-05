@@ -6,6 +6,7 @@ import FocusStation from "../../components/FocusStation";
 
 export default function StudentDashboard() {
   const [tasks, setTasks] = useState([]);
+  const [allAssignments, setAllAssignments] = useState([]);
   const [chartData, setChartData] = useState([]);
   const [latestExam, setLatestExam] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -74,6 +75,9 @@ export default function StudentDashboard() {
           .filter(task => !task.checked && !!task.dueDate)
           .sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate))
           .slice(0, 4);
+
+        // Tüm görevlerin ham verisini haftalık ilerleme grafiği için sakla
+        setAllAssignments(tasksData);
 
         setTasks(upcomingTasks);
       }
@@ -268,19 +272,43 @@ export default function StudentDashboard() {
 
         {/* İlerleme Grafiği Kartı */}
         {(() => {
-          // 1. Mantıksal Hesaplama Kısmı (React Logic)
+          // Gerçek görev verilerinden haftalık ilerlemeyi hesapla
           const now = new Date();
-          
-          // Örnek Görev Verisi (O Haftanın Görevleri)
-          const weeklyTasks = [
-            { id: 1, title: 'Matematik', isCompleted: true, deadline: new Date(now.getFullYear(), now.getMonth(), now.getDate() - 2) },
-            { id: 2, title: 'Fizik', isCompleted: false, deadline: new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1) },
-            { id: 3, title: 'Türkçe', isCompleted: true, deadline: new Date(now.getFullYear(), now.getMonth(), now.getDate() - 2) },
-            { id: 4, title: 'Kimya', isCompleted: false, deadline: new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1) }, // Gelecek (Kaçırılmadı)
-            { id: 5, title: 'Biyoloji', isCompleted: true, deadline: new Date(now.getFullYear(), now.getMonth(), now.getDate()) },
-            { id: 6, title: 'Tarih', isCompleted: false, deadline: new Date(now.getFullYear(), now.getMonth(), now.getDate() - 3) },
-            { id: 7, title: 'Coğrafya', isCompleted: true, deadline: new Date(now.getFullYear(), now.getMonth(), now.getDate() - 3) }
-          ];
+
+          // Tüm öğrenci görevlerini al (backend'den çekilen tasksData)
+          // tasks state'i sadece upcoming/filtered görevleri tutuyor,
+          // bu yüzden ham veriyi tekrar çekmek yerine, chartData'dan yararlanıyoruz
+          // Ancak burada doğrudan assignments API'sinden gelen tüm görevleri kullanmalıyız.
+          // fetchDashboardData'da tasksData (tüm görevler) alınıyor. Bunu tam liste olarak da tutalım.
+
+          // allAssignments state'ini kullanacağız (aşağıda eklenecek)
+          const allTasks = (allAssignments || []).map(task => {
+            const deadline = task.dueDate ? new Date(task.dueDate) : new Date(task.createdAt || now);
+            return {
+              id: task.id,
+              title: task.title,
+              isCompleted: task.status === 'COMPLETED',
+              deadline: deadline
+            };
+          });
+
+          // Bu haftanın Pazartesi ve Pazar günlerini bul
+          const dayOfWeek = now.getDay();
+          const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+          const monday = new Date(now);
+          monday.setHours(0, 0, 0, 0);
+          monday.setDate(now.getDate() + mondayOffset);
+
+          const sunday = new Date(monday);
+          sunday.setDate(monday.getDate() + 6);
+          sunday.setHours(23, 59, 59, 999);
+
+          // Bu haftaya ait görevleri filtrele
+          const weeklyTasks = allTasks.filter(t => {
+            const d = new Date(t.deadline);
+            d.setHours(0, 0, 0, 0);
+            return d >= monday && d <= sunday;
+          });
 
           // Toplam İstatistikler
           const totalTasks = weeklyTasks.length;
@@ -290,11 +318,17 @@ export default function StudentDashboard() {
           // Gün Bazlı Hesaplama
           const daysOfWeek = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
           const dailyData = daysOfWeek.map((dayName, index) => {
-            // Task tarihlerini haftanın gününe eşleştirme (Gerçek projede daha hassas tarih eşleşmesi yapılır)
+            const dayStart = new Date(monday);
+            dayStart.setDate(monday.getDate() + index);
+            dayStart.setHours(0, 0, 0, 0);
+            const dayEnd = new Date(dayStart);
+            dayEnd.setHours(23, 59, 59, 999);
+
             const dayTasks = weeklyTasks.filter(t => {
-               const dayIndex = t.deadline.getDay() === 0 ? 6 : t.deadline.getDay() - 1;
-               return dayIndex === index;
+              const d = new Date(t.deadline);
+              return d >= dayStart && d <= dayEnd;
             });
+
             return {
               day: dayName,
               completed: dayTasks.filter(t => t.isCompleted).length,
@@ -325,7 +359,7 @@ export default function StudentDashboard() {
               {/* 3. Gün Gün Performans Grafiği */}
               <div className="flex-1 flex items-end justify-between gap-2 mt-auto pt-2 mb-6">
                 {dailyData.map((item, idx) => {
-                  const MAX_TASKS = 4; // Sabit yükseklik skalası
+                  const MAX_TASKS = Math.max(4, totalTasks); // Dinamik yükseklik skalası
                   const completedHeight = Math.max((item.completed / MAX_TASKS) * 100, 0);
                   const missedHeight = Math.max((item.missed / MAX_TASKS) * 100, 0);
                   

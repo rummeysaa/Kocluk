@@ -7,50 +7,46 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Sistemdeki tüm kullanıcıları (Öğrenci, Öğretmen, Admin) temsil eden temel model.
 model User {
-  id             Int             @id @default(autoincrement())
-  email          String          @unique
-  password       String
-  name           String
-  role           Role            @default(STUDENT)
-  department     String?
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-
-  studentAssignments Assignment[]  @relation("StudentAssignments")
-  teacherAssignments Assignment[]  @relation("TeacherAssignments")
+  id                 Int              @id @default(autoincrement())
+  email              String           @unique
+  password           String
+  name               String
+  role               Role             @default(STUDENT)
+  department         String?
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+  studentAssignments Assignment[]     @relation("StudentAssignments")
+  teacherAssignments Assignment[]     @relation("TeacherAssignments")
   practiceExams      PracticeExam[]
   chatSessions       ChatSession[]
   notifications      Notification[]
   focusSessions      FocusSession[]
+  teacherRelations   TeacherStudent[] @relation("TeacherToStudent")
+  studentRelations   TeacherStudent[] @relation("StudentToTeacher")
 }
 
 enum Role {
   STUDENT
   TEACHER
-  ADMIN
 }
 
-// Öğretmenlerin öğrencilere atadığı ödevleri ve durumlarını takip eden model.
 model Assignment {
-  id        Int              @id @default(autoincrement())
-  title     String
-  content   String           @db.Text
-  status    AssignmentStatus @default(PENDING)
-  dueDate   DateTime?
-  fileUrl   String?
+  id               Int              @id @default(autoincrement())
+  title            String
+  content          String           @db.Text
+  status           AssignmentStatus @default(PENDING)
+  dueDate          DateTime?
+  fileUrl          String?
   submittedFileUrl String?
-  studentNote      String?   @db.Text
-  
-  teacherId Int
-  teacher   User             @relation("TeacherAssignments", fields: [teacherId], references: [id])
-  
-  studentId Int
-  student   User             @relation("StudentAssignments", fields: [studentId], references: [id])
+  studentNote      String?          @db.Text
+  teacherId        Int
+  studentId        Int
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
 
-  createdAt DateTime         @default(now())
-  updatedAt DateTime         @updatedAt
+  teacher          User             @relation("TeacherAssignments", fields: [teacherId], references: [id], map: "Assignment_teacherId_fkey")
+  student          User             @relation("StudentAssignments", fields: [studentId], references: [id], map: "Assignment_studentId_fkey")
 }
 
 enum AssignmentStatus {
@@ -59,33 +55,25 @@ enum AssignmentStatus {
   LATE
 }
 
-// Öğrencilerin girdiği YKS (TYT ve AYT) deneme sınavı netlerini ve sonuçlarını tutan model.
 model PracticeExam {
-  id          Int      @id @default(autoincrement())
-  examName    String
-  examType    ExamType
-  totalNet    Float
-  weakTopicsNotes String? @db.Text
+  id              Int      @id @default(autoincrement())
+  examName        String
+  examType        ExamType
+  totalNet        Float
+  weakTopicsNotes String?  @db.Text
+  tytTurkish      Float?   @default(0)
+  tytMath         Float?   @default(0)
+  tytSocial       Float?   @default(0)
+  tytScience      Float?   @default(0)
+  aytMath         Float?   @default(0)
+  aytScience      Float?   @default(0)
+  aytEdSos1       Float?   @default(0)
+  aytSocial2      Float?   @default(0)
+  ydtLanguage     Float?   @default(0)
+  studentId       Int
+  createdAt       DateTime @default(now())
 
-  // TYT Columns
-  tytTurkish  Float?   @default(0)
-  tytMath     Float?   @default(0)
-  tytSocial   Float?   @default(0)
-  tytScience  Float?   @default(0)
-
-  // AYT Columns
-  aytMath     Float?   @default(0)
-  aytScience  Float?   @default(0)
-  aytEdSos1   Float?   @default(0)
-  aytSocial2  Float?   @default(0)
-
-  // YDT Columns
-  ydtLanguage Float?   @default(0)
-
-  studentId   Int
-  student     User     @relation(fields: [studentId], references: [id], onDelete: Cascade)
-
-  createdAt   DateTime @default(now())
+  student         User     @relation(fields: [studentId], references: [id], onDelete: Cascade, map: "PracticeExam_studentId_fkey")
 }
 
 enum ExamType {
@@ -94,48 +82,55 @@ enum ExamType {
   YDT
 }
 
-// Yapay zeka asistanı ile yapılan sohbet oturumlarını (oturum bazlı) gruplayan model.
 model ChatSession {
   id        String        @id @default(uuid())
   studentId Int
-  student   User          @relation(fields: [studentId], references: [id], onDelete: Cascade)
   title     String        @default("Yeni Sohbet")
-  messages  ChatMessage[]
-  
   createdAt DateTime      @default(now())
   updatedAt DateTime      @updatedAt
+  messages  ChatMessage[]
+
+  student   User          @relation(fields: [studentId], references: [id], onDelete: Cascade, map: "ChatSession_studentId_fkey")
 }
 
-// ChatSession içerisindeki tekil yapay zeka ve kullanıcı sohbet mesajlarını tutan model.
 model ChatMessage {
   id        String      @id @default(uuid())
   sessionId String
-  session   ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   sender    String      // "student" veya "ai"
   message   String      @db.Text
   imageUrl  String?     @db.Text
-  
   createdAt DateTime    @default(now())
+
+  session   ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade, map: "ChatMessage_sessionId_fkey")
 }
 
-// Sistemdeki kullanıcıların (özellikle öğrencilerin) bildirimlerini tutan model.
 model Notification {
   id        Int      @id @default(autoincrement())
   title     String
   message   String   @db.Text
   isRead    Boolean  @default(false)
-  
   userId    Int
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
   createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade, map: "Notification_userId_fkey")
 }
 
-// Öğrencilerin tamamladığı odaklanma (Pomodoro/Sınav) seanslarını tutan model.
 model FocusSession {
   id        Int      @id @default(autoincrement())
   studentId Int
-  student   User     @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  duration  Int      // Odaklanma süresi (dakika)
+  duration  Int
   createdAt DateTime @default(now())
+
+  student   User     @relation(fields: [studentId], references: [id], onDelete: Cascade, map: "FocusSession_studentId_fkey")
+}
+
+model TeacherStudent {
+  teacherId Int
+  studentId Int
+  createdAt DateTime @default(now())
+
+  teacher   User     @relation("TeacherToStudent", fields: [teacherId], references: [id], onDelete: Cascade)
+  student   User     @relation("StudentToTeacher", fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@id([teacherId, studentId])
 }

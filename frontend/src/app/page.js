@@ -11,6 +11,15 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
+  // Şifre Sıfırlama State'leri
+  const [isResetModalOpen, setIsResetModalOpen] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetPassword, setResetPassword] = useState('');
+  const [resetConfirmPassword, setResetConfirmPassword] = useState('');
+  const [resetSuccess, setResetSuccess] = useState('');
+  const [resetError, setResetError] = useState('');
+  const [resetLoading, setResetLoading] = useState(false);
+
   const handleLogin = async (e) => {
     e.preventDefault();
     setError("");
@@ -56,6 +65,44 @@ export default function LoginPage() {
       setError(err.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResetPassword = async (e) => {
+    e.preventDefault();
+    setResetError('');
+    setResetSuccess('');
+
+    if (resetPassword !== resetConfirmPassword) {
+      setResetError('Şifreler eşleşmiyor.');
+      return;
+    }
+
+    setResetLoading(true);
+    try {
+      const response = await fetch('http://localhost:5000/api/auth/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: resetEmail, password: resetPassword })
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Şifre güncellenemedi.');
+      }
+
+      setResetSuccess('Şifreniz başarıyla güncellendi. Giriş yapabilirsiniz.');
+      setTimeout(() => {
+        setIsResetModalOpen(false);
+        setResetEmail('');
+        setResetPassword('');
+        setResetConfirmPassword('');
+        setResetSuccess('');
+      }, 2000);
+    } catch (err) {
+      setResetError(err.message);
+    } finally {
+      setResetLoading(false);
     }
   };
 
@@ -170,15 +217,104 @@ export default function LoginPage() {
                 </Link>
               </div>
               <div>
-                <a href="#" className="text-xs text-slate-500 hover:text-slate-700 transition-colors">
+                <button 
+                  type="button"
+                  onClick={() => setIsResetModalOpen(true)}
+                  className="text-xs text-slate-500 hover:text-slate-700 transition-colors"
+                >
                   Şifremi Unuttum
-                </a>
+                </button>
               </div>
             </div>
 
           </div>
         </div>
       </div>
+
+      {/* Şifremi Unuttum Modali */}
+      {isResetModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-slate-100">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-lg font-bold text-slate-800">Şifremi Güncelle</h3>
+              <button 
+                type="button"
+                onClick={() => {
+                  setIsResetModalOpen(false);
+                  setResetEmail('');
+                  setResetPassword('');
+                  setResetConfirmPassword('');
+                  setResetSuccess('');
+                  setResetError('');
+                }}
+                className="text-slate-400 hover:text-slate-600 transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {resetError && (
+              <div className="bg-red-50 text-red-600 p-3.5 rounded-xl mb-4 text-xs font-semibold text-center border border-red-100">
+                {resetError}
+              </div>
+            )}
+
+            {resetSuccess && (
+              <div className="bg-green-50 text-green-600 p-3.5 rounded-xl mb-4 text-xs font-semibold text-center border border-green-100">
+                {resetSuccess}
+              </div>
+            )}
+
+            <form onSubmit={handleResetPassword} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">E-posta Adresi</label>
+                <input
+                  type="email"
+                  required
+                  placeholder="ogrenci@example.com veya ogretmen@example.com"
+                  value={resetEmail}
+                  onChange={(e) => setResetEmail(e.target.value)}
+                  className="w-full border border-slate-200 rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-blue-500 text-sm transition-colors"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Yeni Şifre</label>
+                <input
+                  type="password"
+                  required
+                  placeholder="••••••••"
+                  value={resetPassword}
+                  onChange={(e) => setResetPassword(e.target.value)}
+                  className="w-full border border-slate-200 rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-blue-500 text-sm transition-colors"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Yeni Şifre (Tekrar)</label>
+                <input
+                  type="password"
+                  required
+                  placeholder="••••••••"
+                  value={resetConfirmPassword}
+                  onChange={(e) => setResetConfirmPassword(e.target.value)}
+                  className="w-full border border-slate-200 rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-blue-500 text-sm transition-colors"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={resetLoading}
+                className="w-full bg-[#2563EB] text-white font-semibold rounded-xl py-3 flex items-center justify-center gap-2 hover:bg-blue-700 transition-colors mt-2 shadow-sm disabled:opacity-70 text-sm"
+              >
+                {resetLoading ? 'Güncelleniyor...' : 'Şifreyi Güncelle'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

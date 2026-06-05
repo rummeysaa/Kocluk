@@ -3,6 +3,8 @@ import ProtectedRoute from './components/ProtectedRoute';
 
 // Pages
 import Home from './pages/Home';
+import Register from './pages/Register';
+import Settings from './pages/Settings';
 
 // Dashboard Layout & Pages
 import DashboardLayout from './layouts/DashboardLayout';
@@ -22,6 +24,7 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Home />} />
+        <Route path="/register" element={<Register />} />
 
         {/* Student Dashboard */}
         <Route 
@@ -36,6 +39,7 @@ function App() {
           <Route path="daily" element={<DashboardDaily />} />
           <Route path="planned" element={<DashboardPlanned />} />
           <Route path="statistics" element={<DashboardStatistics />} />
+          <Route path="settings" element={<Settings />} />
         </Route>
 
         {/* Teacher Dashboard */}
@@ -50,6 +54,7 @@ function App() {
           <Route index element={<TeacherDashboardOverview />} />
           <Route path="analytics" element={<TeacherDashboardAnalytics />} />
           <Route path="assign" element={<TeacherDashboardAssign />} />
+          <Route path="settings" element={<Settings />} />
         </Route>
       </Routes>
     </BrowserRouter>

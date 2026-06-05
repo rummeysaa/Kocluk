@@ -28,6 +28,7 @@ export default function TeacherDashboardHome() {
   const [addStudentForm, setAddStudentForm] = useState({ name: '', email: '', password: '', department: 'SAY' });
   const [addStudentError, setAddStudentError] = useState('');
   const [isAddingStudent, setIsAddingStudent] = useState(false);
+  const [isExistingStudent, setIsExistingStudent] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -182,29 +183,82 @@ export default function TeacherDashboardHome() {
     }
   };
 
+  const handleEmailBlur = async (e) => {
+    const email = e.target.value;
+    if (!email) return;
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`http://localhost:5000/api/students/check?email=${email}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.exists) {
+          setIsExistingStudent(true);
+          setAddStudentForm(prev => ({
+            ...prev,
+            name: data.student.name,
+            department: data.student.department || 'SAY',
+            password: 'EXISTING_STUDENT_PASSWORD' // bypass frontend validation
+          }));
+        } else {
+          setIsExistingStudent(false);
+          setAddStudentForm(prev => ({
+            ...prev,
+            password: prev.password === 'EXISTING_STUDENT_PASSWORD' ? '' : prev.password
+          }));
+        }
+      }
+    } catch (err) {
+      console.error('E-posta kontrol hatası:', err);
+    }
+  };
+
   const handleAddStudent = async (e) => {
     e.preventDefault();
     setAddStudentError('');
-    if (!addStudentForm.name || !addStudentForm.email || !addStudentForm.password) {
+    if (!addStudentForm.name || !addStudentForm.email || (!isExistingStudent && !addStudentForm.password)) {
       setAddStudentError('Ad, e-posta ve şifre zorunludur.');
       return;
     }
     setIsAddingStudent(true);
     try {
       const token = localStorage.getItem('token');
+      const submitData = isExistingStudent 
+        ? { name: addStudentForm.name, email: addStudentForm.email, department: addStudentForm.department }
+        : addStudentForm;
+
       const res = await fetch('http://localhost:5000/api/students', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify(addStudentForm)
+        body: JSON.stringify(submitData)
       });
       const data = await res.json();
       if (!res.ok) {
         setAddStudentError(data.error || 'Öğrenci eklenemedi.');
       } else {
-        setAllStudents(prev => [...prev, data.student]);
-        setStats(prev => ({ ...prev, activeStudents: prev.activeStudents + 1 }));
+        // Zaten listede yoksa ekle (aynı öğrencinin tekrar listeye eklenmesini önlemek için)
+        setAllStudents(prev => {
+          const exists = prev.some(s => s.id === data.student.id);
+          if (exists) {
+            // Eğer zaten listede varsa sadece güncelle
+            return prev.map(s => s.id === data.student.id ? data.student : s);
+          }
+          return [...prev, data.student];
+        });
+        
+        // Aktif öğrenci sayısını sadece yeni ise artır
+        setAllStudents(prev => {
+          const exists = prev.some(s => s.id === data.student.id);
+          if (!exists) {
+            setStats(prevStats => ({ ...prevStats, activeStudents: prevStats.activeStudents + 1 }));
+          }
+          return prev;
+        });
+
         setIsAddStudentOpen(false);
         setAddStudentForm({ name: '', email: '', password: '', department: 'SAY' });
+        setIsExistingStudent(false);
       }
     } catch (err) {
       setAddStudentError('Sunucu hatası oluştu.');
@@ -220,7 +274,12 @@ export default function TeacherDashboardHome() {
           <p className="text-slate-500 mt-1">Öğrencilerinizin genel durumunu, yaklaşan randevularınızı ve son bildirimlerinizi buradan takip edebilirsiniz.</p>
         </div>
         <button
-          onClick={() => { setAddStudentForm({ name: '', email: '', password: '', department: 'SAY' }); setAddStudentError(''); setIsAddStudentOpen(true); }}
+          onClick={() => { 
+            setAddStudentForm({ name: '', email: '', password: '', department: 'SAY' }); 
+            setAddStudentError(''); 
+            setIsExistingStudent(false);
+            setIsAddStudentOpen(true); 
+          }}
           className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-sm font-bold rounded-xl shadow-md shadow-blue-600/20 transition-all shrink-0"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
@@ -644,20 +703,27 @@ export default function TeacherDashboardHome() {
                   placeholder="ornek@email.com"
                   value={addStudentForm.email}
                   onChange={(e) => setAddStudentForm({ ...addStudentForm, email: e.target.value })}
+                  onBlur={handleEmailBlur}
                   className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                 />
+                {isExistingStudent && (
+                  <div className="text-xs font-semibold text-green-600 mt-1.5 bg-green-50 border border-green-200 rounded-lg px-3 py-1 flex items-center gap-1.5 animate-fade-in">
+                    <span>✓</span> Bu öğrenci zaten kayıtlı. Şifresi otomatik eşleştirilecektir.
+                  </div>
+                )}
               </div>
 
               {/* Şifre */}
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Şifre <span className="text-red-500">*</span></label>
+                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Şifre {!isExistingStudent && <span className="text-red-500">*</span>}</label>
                 <input
                   type="password"
-                  required
-                  placeholder="En az 6 karakter"
-                  value={addStudentForm.password}
+                  required={!isExistingStudent}
+                  disabled={isExistingStudent}
+                  placeholder={isExistingStudent ? "Mevcut şifre korunacaktır" : "En az 6 karakter"}
+                  value={isExistingStudent ? "" : addStudentForm.password}
                   onChange={(e) => setAddStudentForm({ ...addStudentForm, password: e.target.value })}
-                  className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all disabled:bg-slate-50 disabled:text-slate-400"
                 />
               </div>
 

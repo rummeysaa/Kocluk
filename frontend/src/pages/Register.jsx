@@ -1,17 +1,15 @@
-"use client";
 import React, { useState } from "react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
+import { useNavigate, Link } from "react-router-dom";
 
 export default function RegisterPage() {
-  const [role, setRole] = useState("teacher"); // 'student' or 'teacher'
+  const [role, setRole] = useState("teacher"); // only 'teacher' is allowed to self-register
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
+  const navigate = useNavigate();
 
   const handleRegister = async (e) => {
     e.preventDefault();
@@ -48,7 +46,7 @@ export default function RegisterPage() {
 
       // Redirect to login page after 2 seconds
       setTimeout(() => {
-        router.push("/");
+        navigate("/");
       }, 2000);
 
     } catch (err) {
@@ -81,14 +79,14 @@ export default function RegisterPage() {
 
             {/* Error Message */}
             {error && (
-              <div className="bg-red-50 text-red-600 p-4 rounded-xl text-sm mb-6 font-medium border border-red-100">
+              <div className="bg-red-50 text-red-600 p-4 rounded-xl text-sm mb-6 font-medium border border-red-100 text-center">
                 {error}
               </div>
             )}
 
             {/* Success Message */}
             {success && (
-              <div className="bg-green-50 text-green-600 p-4 rounded-xl text-sm mb-6 font-medium border border-green-100">
+              <div className="bg-green-50 text-green-600 p-4 rounded-xl text-sm mb-6 font-medium border border-green-100 text-center">
                 {success}
               </div>
             )}
@@ -144,7 +142,7 @@ export default function RegisterPage() {
             </form>
 
             <div className="mt-6 text-center">
-              <Link href="/" className="text-sm font-semibold text-[#2563EB] hover:text-blue-700 transition-colors">
+              <Link to="/" className="text-sm font-semibold text-[#2563EB] hover:text-blue-700 transition-colors">
                 Zaten hesabınız var mı? Giriş Yapın
               </Link>
             </div>

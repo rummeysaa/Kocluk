@@ -4,8 +4,11 @@ import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import 'katex/dist/katex.min.css';
 
-export default function AiCoachWidget() {
-  const [isOpen, setIsOpen] = useState(false);
+export default function AiCoachWidget({ isOpen: externalIsOpen, setIsOpen: externalSetIsOpen }) {
+  const [localIsOpen, setLocalIsOpen] = useState(false);
+  const isOpen = externalIsOpen !== undefined ? externalIsOpen : localIsOpen;
+  const setIsOpen = externalSetIsOpen !== undefined ? externalSetIsOpen : setLocalIsOpen;
+
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState("");
   const [isLoading, setIsLoading] = useState(false);

@@ -423,16 +423,22 @@ export default function StatisticsPage() {
 
   const sortedExams = [...exams].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
-  // TYT Hesaplama
-  const lastTyt = sortedExams.find(e => e.examType === 'TYT');
+  // TYT Hesaplama (Ortalamaya Göre)
+  const tytExams = sortedExams.filter(e => e.examType === 'TYT');
   let tytData = [ { name: "Doğru", value: 0 }, { name: "Yanlış", value: 0 }, { name: "Boş", value: 120 } ];
   let tytBreakdown = [];
 
-  if (lastTyt) {
-    const tr = getDYFromNet(lastTyt.tytTurkish);
-    const mat = getDYFromNet(lastTyt.tytMath);
-    const fen = getDYFromNet(lastTyt.tytScience);
-    const sos = getDYFromNet(lastTyt.tytSocial);
+  if (tytExams.length > 0) {
+    const tytCount = tytExams.length;
+    const avgTytTurkish = tytExams.reduce((sum, e) => sum + (e.tytTurkish || 0), 0) / tytCount;
+    const avgTytMath = tytExams.reduce((sum, e) => sum + (e.tytMath || 0), 0) / tytCount;
+    const avgTytScience = tytExams.reduce((sum, e) => sum + (e.tytScience || 0), 0) / tytCount;
+    const avgTytSocial = tytExams.reduce((sum, e) => sum + (e.tytSocial || 0), 0) / tytCount;
+
+    const tr = getDYFromNet(avgTytTurkish);
+    const mat = getDYFromNet(avgTytMath);
+    const fen = getDYFromNet(avgTytScience);
+    const sos = getDYFromNet(avgTytSocial);
     
     const totalD = tr.d + mat.d + fen.d + sos.d;
     const totalY = tr.y + mat.y + fen.y + sos.y;
@@ -440,7 +446,7 @@ export default function StatisticsPage() {
     tytData = [
       { name: "Doğru", value: totalD }, 
       { name: "Yanlış", value: totalY }, 
-      { name: "Boş", value: 120 - totalD - totalY }
+      { name: "Boş", value: Math.max(0, 120 - totalD - totalY) }
     ];
     
     tytBreakdown = [
@@ -451,46 +457,57 @@ export default function StatisticsPage() {
     ];
   }
 
-  // AYT Hesaplama
-  const lastAyt = sortedExams.find(e => e.examType === 'AYT');
+  // AYT Hesaplama (Ortalamaya Göre)
+  const aytExams = sortedExams.filter(e => e.examType === 'AYT');
+  const lastAyt = aytExams.length > 0 ? aytExams[0] : null;
   let aytData = [ { name: "Doğru", value: 0 }, { name: "Yanlış", value: 0 }, { name: "Boş", value: 80 } ];
   let aytBreakdown = [];
 
-  if (lastAyt) {
-    const mat = getDYFromNet(lastAyt.aytMath);
-    const fen = getDYFromNet(lastAyt.aytScience);
-    const edSos = getDYFromNet(lastAyt.aytEdSos1);
-    const sos2 = getDYFromNet(lastAyt.aytSocial2);
+  if (aytExams.length > 0) {
+    const aytCount = aytExams.length;
+    const avgAytMath = aytExams.reduce((sum, e) => sum + (e.aytMath || 0), 0) / aytCount;
+    const avgAytScience = aytExams.reduce((sum, e) => sum + (e.aytScience || 0), 0) / aytCount;
+    const avgAytEdSos1 = aytExams.reduce((sum, e) => sum + (e.aytEdSos1 || 0), 0) / aytCount;
+    const avgAytSocial2 = aytExams.reduce((sum, e) => sum + (e.aytSocial2 || 0), 0) / aytCount;
+
+    const mat = getDYFromNet(avgAytMath);
+    const fen = getDYFromNet(avgAytScience);
+    const edSos = getDYFromNet(avgAytEdSos1);
+    const sos2 = getDYFromNet(avgAytSocial2);
     
     if (aytTab === 'SAY') {
       const totalD = mat.d + fen.d;
       const totalY = mat.y + fen.y;
-      aytData = [ { name: "Doğru", value: totalD }, { name: "Yanlış", value: totalY }, { name: "Boş", value: 80 - totalD - totalY } ];
+      aytData = [ { name: "Doğru", value: totalD }, { name: "Yanlış", value: totalY }, { name: "Boş", value: Math.max(0, 80 - totalD - totalY) } ];
       aytBreakdown = [ { subject: "Matematik", total: 40, d: mat.d, y: mat.y }, { subject: "Fen Bilimleri", total: 40, d: fen.d, y: fen.y } ];
     } else if (aytTab === 'EA') {
       const totalD = mat.d + edSos.d;
       const totalY = mat.y + edSos.y;
-      aytData = [ { name: "Doğru", value: totalD }, { name: "Yanlış", value: totalY }, { name: "Boş", value: 80 - totalD - totalY } ];
+      aytData = [ { name: "Doğru", value: totalD }, { name: "Yanlış", value: totalY }, { name: "Boş", value: Math.max(0, 80 - totalD - totalY) } ];
       aytBreakdown = [ { subject: "Matematik", total: 40, d: mat.d, y: mat.y }, { subject: "Edebiyat-Sos1", total: 40, d: edSos.d, y: edSos.y } ];
     } else if (aytTab === 'SÖZ') {
       const totalD = edSos.d + sos2.d;
       const totalY = edSos.y + sos2.y;
-      aytData = [ { name: "Doğru", value: totalD }, { name: "Yanlış", value: totalY }, { name: "Boş", value: 80 - totalD - totalY } ];
+      aytData = [ { name: "Doğru", value: totalD }, { name: "Yanlış", value: totalY }, { name: "Boş", value: Math.max(0, 80 - totalD - totalY) } ];
       aytBreakdown = [ { subject: "Edebiyat-Sos1", total: 40, d: edSos.d, y: edSos.y }, { subject: "Sosyal-2", total: 40, d: sos2.d, y: sos2.y } ];
     }
   }
 
-  // YDT Hesaplama
-  const lastYdt = sortedExams.find(e => e.examType === 'YDT');
+  // YDT Hesaplama (Ortalamaya Göre)
+  const ydtExams = sortedExams.filter(e => e.examType === 'YDT');
+  const lastYdt = ydtExams.length > 0 ? ydtExams[0] : null;
   let ydtData = [ { name: "Doğru", value: 0 }, { name: "Yanlış", value: 0 }, { name: "Boş", value: 80 } ];
   let ydtBreakdown = [];
 
-  if (lastYdt) {
-    const lang = getDYFromNet(lastYdt.ydtLanguage);
+  if (ydtExams.length > 0) {
+    const ydtCount = ydtExams.length;
+    const avgYdtLanguage = ydtExams.reduce((sum, e) => sum + (e.ydtLanguage || 0), 0) / ydtCount;
+
+    const lang = getDYFromNet(avgYdtLanguage);
     ydtData = [ 
       { name: "Doğru", value: lang.d }, 
       { name: "Yanlış", value: lang.y }, 
-      { name: "Boş", value: 80 - lang.d - lang.y } 
+      { name: "Boş", value: Math.max(0, 80 - lang.d - lang.y) } 
     ];
     ydtBreakdown = [ 
       { subject: "Yabancı Dil", total: 80, d: lang.d, y: lang.y } 
