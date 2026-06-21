@@ -1180,6 +1180,7 @@ app.get('/api/user/profile', authenticateToken, async (req, res) => {
     }
 
     let coaches = [];
+    let students = [];
     if (user.role === 'STUDENT') {
       const relations = await prisma.teacherStudent.findMany({
         where: { studentId: req.user.id },
@@ -1194,9 +1195,24 @@ app.get('/api/user/profile', authenticateToken, async (req, res) => {
         }
       });
       coaches = relations.map(r => r.teacher).filter(Boolean);
+    } else if (user.role === 'TEACHER') {
+      const relations = await prisma.teacherStudent.findMany({
+        where: { teacherId: req.user.id },
+        select: {
+          student: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              department: true
+            }
+          }
+        }
+      });
+      students = relations.map(r => r.student).filter(Boolean);
     }
 
-    res.json({ user, coaches });
+    res.json({ user, coaches, students });
   } catch (error) {
     console.error('Fetch profile error:', error);
     res.status(500).json({ error: 'Profil bilgileri getirilemedi.' });

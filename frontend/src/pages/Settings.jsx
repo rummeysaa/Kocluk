@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 export default function Settings() {
   const [profile, setProfile] = useState(null);
   const [coaches, setCoaches] = useState([]);
+  const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -24,6 +25,7 @@ export default function Settings() {
       if (response.ok) {
         setProfile(data.user);
         setCoaches(data.coaches || []);
+        setStudents(data.students || []);
         setName(data.user.name);
         setEmail(data.user.email);
         setDepartment(data.user.department || '');
@@ -141,7 +143,7 @@ export default function Settings() {
                 </svg>
                 Bağlı Rehber Öğretmenlerim
               </h3>
-              
+
               {coaches.length === 0 ? (
                 <div className="text-center py-6 text-xs text-slate-400 leading-relaxed bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
                   Şu an atanmış aktif bir rehber öğretmeniniz bulunmamaktadır.
@@ -149,7 +151,7 @@ export default function Settings() {
               ) : (
                 <div className="space-y-3">
                   {coaches.map((coach) => (
-                    <div 
+                    <div
                       key={coach.id}
                       className="flex items-center gap-3 p-3 bg-slate-50 hover:bg-slate-100/70 rounded-2xl border border-slate-100 transition-colors"
                     >
@@ -166,12 +168,47 @@ export default function Settings() {
               )}
             </div>
           )}
+
+          {/* Bağlı Öğrenciler Kartı (Sadece Öğretmen İçin) */}
+          {profile?.role === 'TEACHER' && (
+            <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100">
+              <h3 className="text-sm font-bold text-slate-800 mb-4 flex items-center gap-2">
+                <svg className="w-5 h-5 text-indigo-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M18 18.72a9.004 9.004 0 00-12 0M15 10a3 3 0 11-6 0m12 2.72a9.004 9.004 0 01-12 0" />
+                </svg>
+                Bağlı Öğrencilerim ({students.length})
+              </h3>
+
+              {students.length === 0 ? (
+                <div className="text-center py-6 text-xs text-slate-400 leading-relaxed bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
+                  Henüz rehberlik ettiğiniz bir öğrenci bulunmamaktadır.
+                </div>
+              ) : (
+                <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1">
+                  {students.map((student) => (
+                    <div
+                      key={student.id}
+                      className="flex items-center gap-3 p-3 bg-slate-50 hover:bg-slate-100/70 rounded-2xl border border-slate-100 transition-colors"
+                    >
+                      <div className="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-sm shrink-0">
+                        {student.name ? student.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : 'S'}
+                      </div>
+                      <div className="overflow-hidden">
+                        <p className="text-xs font-bold text-slate-800 truncate">{student.name}</p>
+                        <p className="text-[10px] text-slate-400 truncate mt-0.5">{student.email} • {student.department || 'Alan Yok'}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Sağ Kolon: Güncelleme Formu */}
         <div className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-slate-100 md:col-span-2">
           <h3 className="text-lg font-bold text-slate-800 mb-6">Profil Bilgilerini Düzenle</h3>
-          
+
           <form onSubmit={handleUpdateProfile} className="space-y-6">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               <div>
